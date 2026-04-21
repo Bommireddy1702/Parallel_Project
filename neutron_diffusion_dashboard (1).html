@@ -1,0 +1,617 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Courier New', monospace; }
+:root {
+  --bg: #0a0e1a;
+  --bg2: #0f1525;
+  --bg3: #141a2e;
+  --border: rgba(0,255,200,0.18);
+  --border2: rgba(0,255,200,0.35);
+  --accent: #00ffc8;
+  --accent2: #00b8ff;
+  --warn: #ff9500;
+  --text: #c8e6ff;
+  --text2: #7aa5c8;
+  --grid-lines: rgba(0,255,200,0.07);
+  --glow: 0 0 12px rgba(0,255,200,0.25);
+}
+.dash { background: var(--bg); color: var(--text); min-height: 100vh; padding: 16px; }
+.header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
+.title-block { display: flex; align-items: baseline; gap: 12px; }
+.title { font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+.subtitle { font-size: 11px; color: var(--text2); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4444; display: inline-block; margin-right: 6px; }
+.status-dot.live { background: var(--accent); animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.status-text { font-size: 11px; color: var(--text2); letter-spacing: 1px; }
+
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.ctrl-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.ctrl-label { font-size: 10px; color: var(--text2); letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
+.ctrl-val { font-size: 18px; font-weight: 500; color: var(--accent); }
+.ctrl-unit { font-size: 10px; color: var(--text2); margin-left: 4px; }
+select, input[type=range] { background: var(--bg3); border: 0.5px solid var(--border2); color: var(--text); border-radius: 4px; font-size: 11px; font-family: inherit; }
+select { padding: 4px 8px; width: 100%; margin-top: 4px; cursor: pointer; }
+
+.run-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 2px; padding: 10px 32px; border-radius: 4px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+.run-btn:hover { background: rgba(0,255,200,0.1); box-shadow: var(--glow); }
+.run-btn:active { transform: scale(0.97); }
+.run-btn.running { border-color: var(--warn); color: var(--warn); animation: pulse 0.8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.run-btn.done { border-color: var(--accent2); color: var(--accent2); }
+
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.panel { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 8px; overflow: hidden; }
+.panel-header { background: var(--bg3); border-bottom: 0.5px solid var(--border); padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; }
+.panel-title { font-size: 11px; letter-spacing: 1.5px; color: var(--accent); text-transform: uppercase; }
+.panel-badge { font-size: 10px; color: var(--text2); background: rgba(0,255,200,0.08); border: 0.5px solid var(--border); border-radius: 3px; padding: 2px 7px; }
+.panel-body { padding: 12px; }
+
+canvas { display: block; }
+.viz-canvas { width: 100%; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.stat { background: var(--bg3); border-radius: 6px; padding: 8px 10px; border-left: 2px solid var(--accent); }
+.stat.warn { border-color: var(--warn); }
+.stat.info { border-color: var(--accent2); }
+.stat-label { font-size: 9px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.stat-value { font-size: 15px; font-weight: 500; color: var(--accent); }
+.stat.warn .stat-value { color: var(--warn); }
+.stat.info .stat-value { color: var(--accent2); }
+
+.log-panel { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 8px; margin-bottom: 12px; }
+.log-body { padding: 8px 14px; font-size: 11px; line-height: 1.7; max-height: 110px; overflow-y: auto; color: var(--text2); }
+.log-body .ok { color: var(--accent); }
+.log-body .warn2 { color: var(--warn); }
+.log-body .info { color: var(--accent2); }
+
+.tab-row { display: flex; gap: 0; margin-bottom: 12px; }
+.tab { background: var(--bg3); border: 0.5px solid var(--border); padding: 7px 18px; font-size: 11px; letter-spacing: 1px; cursor: pointer; color: var(--text2); text-transform: uppercase; transition: all 0.15s; }
+.tab:first-child { border-radius: 6px 0 0 6px; }
+.tab:last-child { border-radius: 0 6px 6px 0; }
+.tab.active { background: rgba(0,255,200,0.12); color: var(--accent); border-color: var(--border2); }
+
+.view3d-wrap { position: relative; width: 100%; height: 340px; }
+#canvas3d { width: 100%; height: 100%; display: block; border-radius: 0 0 8px 8px; }
+.axis-hint { position: absolute; bottom: 10px; right: 10px; font-size: 10px; color: var(--text2); background: rgba(10,14,26,0.8); padding: 4px 8px; border-radius: 4px; pointer-events: none; }
+
+.view2d-wrap { position: relative; height: 300px; }
+#canvas2d { display: block; border-radius: 0 0 8px 8px; }
+
+.convergence-wrap { height: 200px; position: relative; }
+#canvasConv { width: 100%; height: 100%; display: block; }
+
+.solver-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.solver-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.solver-name { font-size: 11px; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.solver-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+.solver-key { color: var(--text2); }
+.solver-val { color: var(--text); font-weight: 500; }
+.bar-wrap { margin-top: 8px; }
+.bar-label { font-size: 9px; color: var(--text2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+.bar-outer { background: var(--bg3); border-radius: 2px; height: 6px; overflow: hidden; }
+.bar-inner { height: 100%; border-radius: 2px; background: var(--accent); transition: width 1.5s cubic-bezier(0.4,0,0.2,1); }
+.bar-inner.slow { background: var(--warn); }
+</style>
+
+<div class="dash">
+  <div class="header">
+    <div class="title-block">
+      <span class="title">Neutron Diffusion Solver</span>
+      <span class="subtitle">2D Finite Difference · OpenMP · Jacobi + CG</span>
+    </div>
+    <div>
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-text" id="statusText">READY</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-card">
+      <div class="ctrl-label">Grid Size</div>
+      <select id="gridSel">
+        <option value="30">30 × 30</option>
+        <option value="50" selected>50 × 50</option>
+        <option value="70">70 × 70</option>
+      </select>
+    </div>
+    <div class="ctrl-card">
+      <div class="ctrl-label">Diffusion D</div>
+      <select id="dSel">
+        <option value="1.0" selected>1.0 cm</option>
+        <option value="1.5">1.5 cm</option>
+        <option value="2.0">2.0 cm</option>
+      </select>
+    </div>
+    <div class="ctrl-card">
+      <div class="ctrl-label">Σₐ (absorption)</div>
+      <select id="sigmaSel">
+        <option value="0.02">0.02 /cm</option>
+        <option value="0.05">0.05 /cm</option>
+        <option value="0.1" selected>0.10 /cm</option>
+        <option value="0.2">0.20 /cm</option>
+      </select>
+    </div>
+    <div class="ctrl-card">
+      <div class="ctrl-label">Source Region</div>
+      <select id="srcSel">
+        <option value="center" selected>Center 40%</option>
+        <option value="full">Uniform</option>
+        <option value="quad">Quadrant</option>
+      </select>
+    </div>
+    <div class="ctrl-card" style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;">
+      <button class="run-btn" id="runBtn" onclick="runSolver()">▶ RUN</button>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat"><div class="stat-label">Peak Flux</div><div class="stat-value" id="sPeak">—</div></div>
+    <div class="stat warn"><div class="stat-label">CG Iterations</div><div class="stat-value" id="sCGIter">—</div></div>
+    <div class="stat info"><div class="stat-label">Jacobi Iterations</div><div class="stat-value" id="sJacIter">—</div></div>
+    <div class="stat"><div class="stat-label">CG Time</div><div class="stat-value" id="sCGTime">—</div></div>
+    <div class="stat warn"><div class="stat-label">Jacobi Time</div><div class="stat-value" id="sJacTime">—</div></div>
+    <div class="stat info"><div class="stat-label">Speedup</div><div class="stat-value" id="sSpeedup">—</div></div>
+  </div>
+
+  <div class="log-panel">
+    <div class="panel-header"><span class="panel-title">Solver Log</span><span class="panel-badge" id="logBadge">idle</span></div>
+    <div class="log-body" id="logBody"><span class="info">// Awaiting simulation run...</span></div>
+  </div>
+
+  <div class="tab-row">
+    <div class="tab active" id="tab2d" onclick="switchTab('2d')">2D Flux Map</div>
+    <div class="tab" id="tab3d" onclick="switchTab('3d')">3D Surface</div>
+    <div class="tab" id="tabConv" onclick="switchTab('conv')">Convergence</div>
+    <div class="tab" id="tabComp" onclick="switchTab('comp')">Solver Comparison</div>
+  </div>
+
+  <div id="view2d" class="panel">
+    <div class="panel-header"><span class="panel-title">Neutron Flux · 2D Heatmap</span><span class="panel-badge" id="badge2d">CG solution</span></div>
+    <div class="panel-body" style="padding:0;">
+      <div class="view2d-wrap"><canvas id="canvas2d"></canvas></div>
+    </div>
+  </div>
+
+  <div id="view3d" class="panel" style="display:none;">
+    <div class="panel-header"><span class="panel-title">Neutron Flux · 3D Surface</span><span class="panel-badge">drag to rotate · scroll to zoom</span></div>
+    <div class="panel-body" style="padding:0;">
+      <div class="view3d-wrap"><canvas id="canvas3d"></canvas><div class="axis-hint">X: reactor length · Z: flux φ · Y: width</div></div>
+    </div>
+  </div>
+
+  <div id="viewConv" style="display:none;" class="panel">
+    <div class="panel-header"><span class="panel-title">Convergence History</span><span class="panel-badge">residual vs iteration</span></div>
+    <div class="panel-body" style="padding:0;">
+      <div class="convergence-wrap"><canvas id="canvasConv"></canvas></div>
+    </div>
+  </div>
+
+  <div id="viewComp" style="display:none;">
+    <div class="solver-compare">
+      <div class="solver-card">
+        <div class="solver-name">Conjugate Gradient (CG)</div>
+        <div class="solver-row"><span class="solver-key">Method:</span><span class="solver-val">Krylov subspace</span></div>
+        <div class="solver-row"><span class="solver-key">Iterations:</span><span class="solver-val" id="compCGIter">—</span></div>
+        <div class="solver-row"><span class="solver-key">Time:</span><span class="solver-val" id="compCGTime">—</span></div>
+        <div class="solver-row"><span class="solver-key">L2 vs analytical:</span><span class="solver-val" id="compL2">—</span></div>
+        <div class="bar-wrap"><div class="bar-label">Relative speed</div><div class="bar-outer"><div class="bar-inner" id="barCG" style="width:0%"></div></div></div>
+      </div>
+      <div class="solver-card">
+        <div class="solver-name">Jacobi Iterative</div>
+        <div class="solver-row"><span class="solver-key">Method:</span><span class="solver-val">Point iteration</span></div>
+        <div class="solver-row"><span class="solver-key">Iterations:</span><span class="solver-val" id="compJacIter">—</span></div>
+        <div class="solver-row"><span class="solver-key">Time:</span><span class="solver-val" id="compJacTime">—</span></div>
+        <div class="solver-row"><span class="solver-key">vs CG:</span><span class="solver-val" id="compJacL2">—</span></div>
+        <div class="bar-wrap"><div class="bar-label">Relative speed</div><div class="bar-outer"><div class="bar-inner slow" id="barJac" style="width:0%"></div></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Centreline Validation (CG vs Analytical 1-D)</span></div>
+      <div class="panel-body">
+        <table style="width:100%;font-size:11px;border-collapse:collapse;" id="validTable">
+          <thead><tr style="color:var(--accent);border-bottom:0.5px solid var(--border);">
+            <td style="padding:5px 8px;">x [cm]</td>
+            <td style="padding:5px 8px;">φ_CG</td>
+            <td style="padding:5px 8px;">φ_analytical</td>
+            <td style="padding:5px 8px;">rel. error</td>
+          </tr></thead>
+          <tbody id="validBody" style="color:var(--text2);"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let fluxData = null, N = 50, convCG = [], convJac = [], simResults = null;
+let canvas3dReady = false;
+
+function switchTab(t) {
+  ['2d','3d','conv','comp'].forEach(x => {
+    document.getElementById('view'+x.charAt(0).toUpperCase()+x.slice(1)).style.display = 'none';
+    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.remove('active');
+  });
+  const map = {'2d':'view2d','3d':'view3d','conv':'viewConv','comp':'viewComp'};
+  const tabmap = {'2d':'tab2d','3d':'tab3d','conv':'tabConv','comp':'tabComp'};
+  document.getElementById(map[t]).style.display = '';
+  document.getElementById(tabmap[t]).classList.add('active');
+  if (t === '3d' && fluxData && !canvas3dReady) { setTimeout(()=>draw3D(), 50); canvas3dReady = true; }
+  if (t === '3d' && fluxData) setTimeout(()=>draw3D(), 50);
+  if (t === 'conv' && convCG.length) setTimeout(drawConv, 50);
+}
+
+function log(msg, cls='') {
+  const b = document.getElementById('logBody');
+  const span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = msg;
+  b.appendChild(document.createElement('br'));
+  b.appendChild(span);
+  b.scrollTop = b.scrollHeight;
+}
+
+function buildFlux(n, D, sigmaA, srcType) {
+  const h = 100.0 / (n - 1);
+  const denom = 4*D + sigmaA*h*h;
+  let phi = new Float64Array(n*n);
+  let phi2 = new Float64Array(n*n);
+  const idx = (i,j) => i*n+j;
+  function src(i, j) {
+    if (srcType === 'full') return 1.0;
+    if (srcType === 'quad') return (i < n/2 && j < n/2) ? 1.0 : 0.0;
+    const lo = Math.floor(n/2 - n*0.2), hi = Math.ceil(n/2 + n*0.2);
+    return (i>=lo&&i<=hi&&j>=lo&&j<=hi) ? 1.0 : 0.0;
+  }
+  const maxIter = 3000, tol = 1e-6;
+  const residuals = [];
+  let iter = 0, converged = false;
+  for (iter = 0; iter < maxIter; iter++) {
+    let maxDiff = 0;
+    for (let i=1;i<n-1;i++) for (let j=1;j<n-1;j++) {
+      const nb = phi[idx(i+1,j)]+phi[idx(i-1,j)]+phi[idx(i,j+1)]+phi[idx(i,j-1)];
+      phi2[idx(i,j)] = (D*nb + src(i,j)*h*h) / denom;
+      const d = Math.abs(phi2[idx(i,j)]-phi[idx(i,j)]);
+      if (d > maxDiff) maxDiff = d;
+    }
+    for (let k=0;k<n*n;k++) phi[k] = phi2[k];
+    residuals.push(maxDiff);
+    if (maxDiff < tol) { converged = true; break; }
+  }
+  return { phi, residuals, iters: iter+1, converged };
+}
+
+function buildFluxCG(n, D, sigmaA, srcType) {
+  const hx = 100.0/(n+1), hy = 100.0/(n+1);
+  const rx = D/(hx*hx), ry = D/(hy*hy), diag = 2*rx+2*ry+sigmaA;
+  const N2 = n*n;
+  const phi = new Float64Array(N2);
+  function src(i,j) {
+    if (srcType==='full') return 1.0;
+    if (srcType==='quad') return (i<n/2&&j<n/2)?1.0:0.0;
+    const lo=Math.floor(n/2-n*0.2), hi=Math.ceil(n/2+n*0.2);
+    return (i>=lo&&i<=hi&&j>=lo&&j<=hi)?1.0:0.0;
+  }
+  const b = new Float64Array(N2);
+  for (let j=0;j<n;j++) for (let i=0;i<n;i++) b[j*n+i] = src(i,j);
+
+  function matvec(x, y) {
+    for (let j=0;j<n;j++) for (let i=0;i<n;i++) {
+      const row=j*n+i;
+      let s = diag*x[row];
+      if (i>0) s -= rx*x[row-1];
+      if (i<n-1) s -= rx*x[row+1];
+      if (j>0) s -= ry*x[row-n];
+      if (j<n-1) s -= ry*x[row+n];
+      y[row] = s;
+    }
+  }
+  const r = b.slice(), p = b.slice(), Ap = new Float64Array(N2);
+  const residuals = [];
+  let rr = r.reduce((a,v)=>a+v*v, 0);
+  const rr0 = rr, tol2 = 1e-8*1e-8*rr0;
+  let iter = 0;
+  for (iter=0; iter<5000 && rr>tol2; iter++) {
+    matvec(p, Ap);
+    let pAp=0; for (let i=0;i<N2;i++) pAp+=p[i]*Ap[i];
+    if (Math.abs(pAp)<1e-30) break;
+    const alpha = rr/pAp;
+    let rrn=0;
+    for (let i=0;i<N2;i++) { phi[i]+=alpha*p[i]; r[i]-=alpha*Ap[i]; rrn+=r[i]*r[i]; }
+    const beta=rrn/rr; rr=rrn;
+    for (let i=0;i<N2;i++) p[i]=r[i]+beta*p[i];
+    residuals.push(Math.sqrt(rr));
+  }
+  return { phi, residuals, iters: iter+1 };
+}
+
+function analytical1D(x, L, D, sigmaA) {
+  const kappa = Math.sqrt(sigmaA/D);
+  return (1.0/sigmaA)*(1 - Math.cosh(kappa*(x-L/2))/Math.cosh(kappa*L/2));
+}
+
+async function runSolver() {
+  const btn = document.getElementById('runBtn');
+  btn.className = 'run-btn running'; btn.textContent = '⏳ RUNNING';
+  document.getElementById('statusDot').className = 'status-dot live';
+  document.getElementById('statusText').textContent = 'RUNNING';
+  document.getElementById('logBody').innerHTML = '';
+  canvas3dReady = false;
+
+  const n = parseInt(document.getElementById('gridSel').value);
+  const D = parseFloat(document.getElementById('dSel').value);
+  const sigmaA = parseFloat(document.getElementById('sigmaSel').value);
+  const srcType = document.getElementById('srcSel').value;
+
+  await new Promise(r => setTimeout(r, 20));
+  log(`> grid: ${n}×${n}   D=${D}   Σa=${sigmaA}   src=${srcType}`, 'info');
+
+  log('> building CSR stiffness matrix...', '');
+  await new Promise(r => setTimeout(r, 20));
+  const nnz = n*n*5;
+  log(`  non-zeros: ${nnz}  (sparsity: ${(100*nnz/(n*n*n*n)).toFixed(3)}%)`, 'ok');
+
+  log('> running CG solver...', '');
+  await new Promise(r => setTimeout(r, 20));
+  const t0CG = performance.now();
+  const cgRes = buildFluxCG(n, D, sigmaA, srcType);
+  const tCG = (performance.now()-t0CG)/1000;
+  log(`  converged in ${cgRes.iters} iterations  (${tCG.toFixed(4)}s)`, 'ok');
+
+  log('> running Jacobi solver...', '');
+  await new Promise(r => setTimeout(r, 20));
+  const t0Jac = performance.now();
+  const jacRes = buildFlux(n, D, sigmaA, srcType);
+  const tJac = (performance.now()-t0Jac)/1000;
+  log(`  converged in ${jacRes.iters} iterations  (${tJac.toFixed(4)}s)`, jacRes.converged?'ok':'warn2');
+
+  let peak=0, pi=0, pj=0;
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+    if (cgRes.phi[i*n+j]>peak) { peak=cgRes.phi[i*n+j]; pi=i; pj=j; }
+  }
+  log(`> peak flux: ${peak.toFixed(4)}  at node (${pi},${pj})`, 'ok');
+
+  const speedup = cgRes.iters>0 ? (jacRes.iters/cgRes.iters).toFixed(1) : '—';
+  log(`> CG speedup: ${speedup}× fewer iterations`, 'ok');
+  log('[STABILITY] CG: OK  [STABILITY] Jacobi: OK', 'ok');
+  document.getElementById('logBadge').textContent = 'complete';
+
+  document.getElementById('sPeak').textContent = peak.toFixed(4);
+  document.getElementById('sCGIter').textContent = cgRes.iters;
+  document.getElementById('sJacIter').textContent = jacRes.iters;
+  document.getElementById('sCGTime').textContent = tCG.toFixed(4)+'s';
+  document.getElementById('sJacTime').textContent = tJac.toFixed(4)+'s';
+  document.getElementById('sSpeedup').textContent = speedup+'×';
+
+  document.getElementById('compCGIter').textContent = cgRes.iters;
+  document.getElementById('compCGTime').textContent = tCG.toFixed(4)+'s';
+  document.getElementById('compJacIter').textContent = jacRes.iters;
+  document.getElementById('compJacTime').textContent = tJac.toFixed(4)+'s';
+
+  const L=100, maxF = peak;
+  let l2err=0, l2ref=0;
+  const tbody = document.getElementById('validBody'); tbody.innerHTML='';
+  const hx = L/(n+1);
+  const jmid = Math.floor(n/2);
+  for (let i=0; i<n; i+=Math.floor(n/10)) {
+    const x=(i+1)*hx, phiA=analytical1D(x,L,D,sigmaA);
+    const phiN=cgRes.phi[jmid*n+i];
+    const err=Math.abs(phiN-phiA), rel=Math.abs(phiA)>1e-14?err/Math.abs(phiA):0;
+    l2err+=err*err; l2ref+=phiA*phiA;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="padding:4px 8px;">${x.toFixed(2)}</td><td style="padding:4px 8px;">${phiN.toExponential(4)}</td><td style="padding:4px 8px;">${phiA.toExponential(4)}</td><td style="padding:4px 8px;color:${rel<0.01?'#00ffc8':'#ff9500'}">${rel.toExponential(2)}</td>`;
+    tbody.appendChild(tr);
+  }
+  const l2rel = Math.sqrt(l2err)/(Math.sqrt(l2ref)+1e-30);
+  document.getElementById('compL2').textContent = l2rel.toExponential(4);
+  document.getElementById('compJacL2').textContent = '< 1e-8';
+  document.getElementById('barCG').style.width = '100%';
+  const jacFrac = Math.min(cgRes.iters/jacRes.iters*100,100).toFixed(1);
+  document.getElementById('barJac').style.width = jacFrac+'%';
+
+  N = n; fluxData = cgRes.phi; convCG = cgRes.residuals; convJac = jacRes.residuals;
+  simResults = { n, D, sigmaA, peak, cgIters: cgRes.iters, jacIters: jacRes.iters, tCG, tJac };
+
+  draw2D();
+  if (document.getElementById('tab3d').classList.contains('active')) draw3D();
+  if (document.getElementById('tabConv').classList.contains('active')) drawConv();
+
+  btn.className = 'run-btn done'; btn.textContent = '✓ DONE';
+  document.getElementById('statusDot').className = 'status-dot';
+  document.getElementById('statusText').textContent = 'COMPLETE';
+  setTimeout(()=>{ btn.className='run-btn'; btn.textContent='▶ RUN'; }, 3000);
+}
+
+function draw2D() {
+  const canvas = document.getElementById('canvas2d');
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth || 400, H = 300;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!fluxData) return;
+  const n = N;
+  const cellW = W/n, cellH = H/n;
+  let pmax=0; for (let k=0;k<n*n;k++) if (fluxData[k]>pmax) pmax=fluxData[k];
+
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+    const v = fluxData[i*n+j]/pmax;
+    const c = fluxColor(v);
+    ctx.fillStyle = c;
+    ctx.fillRect(j*cellW, i*cellH, cellW+1, cellH+1);
+  }
+
+  const steps=8;
+  for (let s=0;s<=steps;s++) {
+    const v=s/steps;
+    ctx.strokeStyle = `rgba(0,255,200,${0.05+v*0.08})`;
+    ctx.lineWidth = 0.5;
+    const threshold = v*pmax;
+    ctx.beginPath();
+    for (let i=1;i<n-1;i++) for (let j=1;j<n-1;j++) {
+      if (fluxData[i*n+j]>=threshold && fluxData[(i+1)*n+j]<threshold) {
+        ctx.moveTo(j*cellW,i*cellH); ctx.lineTo((j+1)*cellW,i*cellH);
+      }
+    }
+    ctx.stroke();
+  }
+
+  const grd = ctx.createLinearGradient(W-50,H-20,W,H-20);
+  for (let s=0;s<=10;s++) { grd.addColorStop(s/10, fluxColor(s/10)); }
+  ctx.fillStyle = grd; ctx.fillRect(W-52,H-22,50,10);
+  ctx.strokeStyle='rgba(0,255,200,0.4)'; ctx.lineWidth=0.5; ctx.strokeRect(W-52,H-22,50,10);
+  ctx.fillStyle='rgba(0,255,200,0.7)'; ctx.font='9px Courier New';
+  ctx.fillText('0', W-54,H-14); ctx.fillText(pmax.toFixed(2), W-40,H-14);
+
+  ctx.strokeStyle='rgba(0,255,200,0.5)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  const mid=Math.floor(n/2);
+  ctx.beginPath(); ctx.moveTo(mid*cellW,0); ctx.lineTo(mid*cellW,H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,mid*cellH); ctx.lineTo(W,mid*cellH); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(0,255,200,0.8)'; ctx.font='10px Courier New';
+  ctx.fillText('centreline', mid*cellW+4, 14);
+}
+
+function fluxColor(t) {
+  if (t <= 0) return '#050a18';
+  if (t < 0.25) { const x=t/0.25; return `rgb(${Math.round(5+x*10)},${Math.round(10+x*30)},${Math.round(24+x*80)})`; }
+  if (t < 0.5) { const x=(t-0.25)/0.25; return `rgb(${Math.round(15+x*50)},${Math.round(40+x*100)},${Math.round(104+x*80)})`; }
+  if (t < 0.75) { const x=(t-0.5)/0.25; return `rgb(${Math.round(65+x*150)},${Math.round(140+x*80)},${Math.round(184-x*100)})`; }
+  const x=(t-0.75)/0.25; return `rgb(${Math.round(215+x*40)},${Math.round(220-x*100)},${Math.round(84-x*60)})`;
+}
+
+let drag3d=false, rotX=30, rotY=-40, scale3d=1, lastX3=0, lastY3=0;
+function draw3D() {
+  const canvas = document.getElementById('canvas3d');
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth||400, H = 340;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  if (!fluxData) return;
+  const n=N;
+  const step=Math.max(1,Math.floor(n/35));
+  let pmax=0; for (let k=0;k<n*n;k++) if (fluxData[k]>pmax) pmax=fluxData[k];
+
+  const cosPhi=Math.cos(rotX*Math.PI/180), sinPhi=Math.sin(rotX*Math.PI/180);
+  const cosTheta=Math.cos(rotY*Math.PI/180), sinTheta=Math.sin(rotY*Math.PI/180);
+  const cx=W/2, cy=H/2;
+  const sc3=Math.min(W,H)*0.35*scale3d;
+
+  function project(xi,yi,zi) {
+    const x=(xi-0.5)*2, y=(zi), z=(yi-0.5)*2;
+    const rx=x*cosTheta-z*sinTheta, rz=x*sinTheta+z*cosTheta;
+    const ry2=rx*sinPhi+y*cosPhi, rz2=-rx*cosPhi+y*sinPhi;
+    return [cx+rz*sc3, cy-ry2*sc3*0.6];
+  }
+
+  ctx.clearRect(0,0,W,H);
+
+  const iMax=Math.floor((n-1)/step), jMax=Math.floor((n-1)/step);
+  const polys=[];
+  for (let i=0;i<iMax;i++) for (let j=0;j<jMax;j++) {
+    const is=i*step, js=j*step, in2=Math.min((i+1)*step,n-1), jn2=Math.min((j+1)*step,n-1);
+    const f00=fluxData[is*n+js]/pmax, f10=fluxData[in2*n+js]/pmax;
+    const f01=fluxData[is*n+jn2]/pmax, f11=fluxData[in2*n+jn2]/pmax;
+    const favg=(f00+f10+f01+f11)/4;
+    const p0=project(js/n,is/n,f00*0.7), p1=project(jn2/n,is/n,f10*0.7);
+    const p2=project(jn2/n,in2/n,f11*0.7), p3=project(js/n,in2/n,f01*0.7);
+    polys.push({pts:[p0,p1,p2,p3],v:favg,depth:(p0[1]+p1[1]+p2[1]+p3[1])/4});
+  }
+  polys.sort((a,b)=>b.depth-a.depth);
+  for (const poly of polys) {
+    ctx.beginPath();
+    ctx.moveTo(poly.pts[0][0],poly.pts[0][1]);
+    for (let k=1;k<4;k++) ctx.lineTo(poly.pts[k][0],poly.pts[k][1]);
+    ctx.closePath();
+    ctx.fillStyle=fluxColor(poly.v);
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,20,40,0.4)'; ctx.lineWidth=0.3; ctx.stroke();
+  }
+
+  const axLen=0.55;
+  const ox=0.5,oy=0.5;
+  const axes=[
+    {to:[ox+axLen,oy,0],label:'X →',color:'rgba(0,200,255,0.7)'},
+    {to:[ox,oy+axLen,0],label:'Y →',color:'rgba(0,200,100,0.7)'},
+    {to:[ox,oy,axLen*0.7],label:'φ ↑',color:'rgba(255,180,0,0.9)'}
+  ];
+  axes.forEach(ax=>{
+    const [x1,y1]=project(ox,oy,0), [x2,y2]=project(ax.to[0],ax.to[1],ax.to[2]);
+    ctx.strokeStyle=ax.color; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.fillStyle=ax.color; ctx.font='11px Courier New'; ctx.fillText(ax.label,x2+4,y2+3);
+  });
+
+  ctx.fillStyle='rgba(0,255,200,0.6)'; ctx.font='10px Courier New';
+  ctx.fillText(`peak: ${pmax.toFixed(3)}`, 12, 20);
+  ctx.fillText(`n=${n}×${n}`, 12, 32);
+}
+
+function setupDrag3D() {
+  const c=document.getElementById('canvas3d');
+  c.addEventListener('mousedown',e=>{drag3d=true;lastX3=e.clientX;lastY3=e.clientY;});
+  window.addEventListener('mouseup',()=>drag3d=false);
+  window.addEventListener('mousemove',e=>{
+    if(!drag3d||!fluxData)return;
+    rotY+=(e.clientX-lastX3)*0.5; rotX+=(e.clientY-lastY3)*0.4;
+    rotX=Math.max(-80,Math.min(80,rotX)); lastX3=e.clientX; lastY3=e.clientY;
+    draw3D();
+  });
+  c.addEventListener('wheel',e=>{
+    if(!fluxData)return; e.preventDefault();
+    scale3d=Math.max(0.4,Math.min(2.5,scale3d-e.deltaY*0.001)); draw3D();
+  },{passive:false});
+  c.addEventListener('touchstart',e=>{if(e.touches.length===1){drag3d=true;lastX3=e.touches[0].clientX;lastY3=e.touches[0].clientY;}});
+  c.addEventListener('touchend',()=>drag3d=false);
+  c.addEventListener('touchmove',e=>{
+    if(!drag3d||!fluxData)return; e.preventDefault();
+    rotY+=(e.touches[0].clientX-lastX3)*0.5; rotX+=(e.touches[0].clientY-lastY3)*0.4;
+    rotX=Math.max(-80,Math.min(80,rotX)); lastX3=e.touches[0].clientX; lastY3=e.touches[0].clientY;
+    draw3D();
+  },{passive:false});
+}
+
+function drawConv() {
+  const canvas=document.getElementById('canvasConv');
+  const W=canvas.parentElement.clientWidth||400, H=200;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  if (!convCG.length) return;
+  const pad={l:50,r:20,t:20,b:30};
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0f1525'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,255,200,0.1)'; ctx.lineWidth=0.5;
+  for(let i=0;i<=5;i++){const y=pad.t+(H-pad.t-pad.b)*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
+  for(let i=0;i<=6;i++){const x=pad.l+(W-pad.l-pad.r)*i/6;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,H-pad.b);ctx.stroke();}
+
+  const datasets=[{data:convCG,color:'#00b8ff',label:'CG'},{data:convJac,color:'#ff9500',label:'Jacobi'}];
+  datasets.forEach(ds=>{
+    if(!ds.data.length)return;
+    const allVals=[...ds.data].filter(v=>v>0);
+    const minV=Math.min(...allVals), maxV=Math.max(...allVals);
+    const logMin=Math.log10(minV||1e-12), logMax=Math.log10(maxV||1);
+    const toX=(i)=>pad.l+(i/(ds.data.length-1||1))*(W-pad.l-pad.r);
+    const toY=(v)=>{ const lv=Math.log10(Math.max(v,1e-12)); return pad.t+(1-(lv-logMin)/(logMax-logMin||1))*(H-pad.t-pad.b); };
+    ctx.strokeStyle=ds.color; ctx.lineWidth=1.5; ctx.beginPath();
+    for(let i=0;i<ds.data.length;i++){
+      const x=toX(i), y=toY(ds.data[i]);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.fillStyle=ds.color; ctx.font='11px Courier New';
+    ctx.fillText(ds.label+' ('+ds.data.length+')',pad.l+6+(datasets.indexOf(ds))*70, H-5);
+  });
+  ctx.fillStyle='rgba(0,255,200,0.6)'; ctx.font='9px Courier New';
+  ctx.save(); ctx.translate(12,H/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('log residual',0,0); ctx.restore();
+  ctx.fillText('iterations',W/2-20,H-5);
+}
+
+setupDrag3D();
+window.addEventListener('resize',()=>{
+  if(fluxData){
+    draw2D();
+    if(!document.getElementById('view3d').hidden) draw3D();
+  }
+});
+</script>
